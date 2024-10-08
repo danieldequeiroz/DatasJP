@@ -1,0 +1,460 @@
+<!DOCTYPE html> <!-- Declara que este é um documento HTML5 -->
+<html lang="pt-BR"> <!-- Define o idioma da página como português do Brasil -->
+
+
+
+<head>
+    <meta charset="UTF-8"> <!-- Define a codificação de caracteres como UTF-8 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Configura a visualização para dispositivos móveis -->
+    <title>Servidor API DATAS Paraíba</title> <!-- Define o título da página, que aparece na aba do navegador -->
+
+    
+
+<!-- Define a fonte padrão da página como Arial ou sans-serif -->
+<style>
+       
+ 
+  body {
+      font-family: Arial, sans-serif;
+      background-color: black; /* Define o fundo da página como preto */
+      color: white; /* Define a cor do texto como branco para contraste */
+  }
+
+  /* Estiliza os botões com cores "marca-texto" */
+  button {
+      background-color: yellow; /* Cor de fundo como marca-texto (amarelo) */
+      color: black; /* Cor do texto em preto para contraste */
+      border: none; /* Remove as bordas padrão dos botões */
+      padding: 10px 20px; /* Define o espaçamento interno dos botões */
+      font-size: 16px; /* Define o tamanho da fonte dos botões */
+      cursor: pointer; /* Muda o cursor para "pointer" ao passar sobre os botões */
+  }
+
+  /* Estilo para quando o mouse estiver sobre o botão */
+  button:hover {
+      background-color: lightyellow; /* Torna o fundo um pouco mais claro ao passar o mouse */
+  }
+
+  /* Adiciona um espaço entre os botões */
+  button + button {
+      margin-left: 10px; /* Espaço entre os botões */
+  }
+</style>
+</head>
+
+<body>
+  <img src="logopretadejp.jpg" alt="Logo do Servidor API DATAS" width="150" height="80" />
+  <br> </br>
+    <!-- Botões para selecionar a ação desejada -->
+    <button id="btn-data">Intervalo de Datas.</button> <!-- Botão para calcular dias úteis entre duas datas -->
+    <button id="btn-dias-uteis">Data Final</button> <!-- Botão para calcular a data final após adicionar dias úteis -->
+    <button id="btn-feriados">Todos os Feriados</button> <!-- Botão para exibir feriados -->
+    <button id="btn-feriadosfixos">Feriados Fixos</button> <!-- Botão para ve feriados fixos -->
+    <button id="btn-feriadosnaofixos">Feriados Não Fixos</button> <!-- Botão para ve feriados nao fixos -->
+    <button id="btn-addferiados">adicionar feriados.</button> <!-- Botão para adicionar feriados -->
+
+    <script>
+      const btnFeriadosFixos = document.getElementById('btn-feriadosfixos');
+
+btnFeriadosFixos.addEventListener('click', () => {
+  fetch('/api/feriadosfixos')
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch(error => console.error(error));
+});
+    </script>
+
+    <br><br><br>
+
+    <!-- Contêineres de entrada de dados -->
+    <div id="data-inicial-container" style="display: none;"> <!-- Contêiner para selecionar a data inicial, oculto por padrão -->
+        <label for="data-inicial">Data Inicial:</label>
+        <input type="date" id="data-inicial" name="dataInicial"> <!-- Campo de entrada para a data inicial -->
+    </div>
+
+    <div id="data-final-container" style="display: none;"> <!-- Contêiner para selecionar a data final, oculto por padrão -->
+        <label for="data-final">Data Final:</label>
+        <input type="date" id="data-final" name="dataFinal"> <!-- Campo de entrada para a data final -->
+    </div>
+
+    <div id="quant-dias-uteis-container" style="display: none;"> <!-- Contêiner para inserir a quantidade de dias úteis, oculto por padrão -->
+        <label for="quant-dias-uteis">Quant. Dias Úteis:</label>
+        <input type="number" id="quant-dias-uteis" name="quantDiasUteis"> <!-- Campo de entrada para a quantidade de dias úteis -->
+    </div>
+
+    <button id="btn-calcular" style="display: none;">Calcular</button> <!-- Botão para iniciar o cálculo, oculto por padrão -->
+    <div id="map"></div>
+    <div id="feriados-fixos-container" ></div>
+    <div id="feriadosnaofixos-container" ></div>
+    <div id="feriadosnaofixos-container" style="display: none;"></div>
+
+    <!-- Div para exibir os resultados -->
+    <div id="result">
+        <label id="result-label"></label> <!-- Rótulo para o resultado (ex: "Dias Úteis:") -->
+        <div id="result-content"></div> <!-- Div para exibir o conteúdo do resultado -->
+    </div>
+
+    <script>
+      document.getElementById("btn-feriadosfixos").addEventListener("click", function() {
+      fetch('/api/feriadosfixos')
+        .then(response => response.json())
+        .then(data => console.log(data))
+        .catch(error => console.error(error));
+    });
+    </script>
+
+    <script>
+        // Referências aos elementos da página
+        const btnData = document.getElementById('btn-data');
+        const btnDiasUteis = document.getElementById('btn-dias-uteis');
+        const btnFeriados = document.getElementById('btn-feriados');
+        const btnCalcular = document.getElementById('btn-calcular');
+        const resultLabel = document.getElementById('result-label');
+        const resultContent = document.getElementById('result-content');
+
+        // Função para esconder todos os contêineres de entrada e limpar os resultados
+        function hideAllContainers() {
+            document.getElementById('data-inicial-container').style.display = 'none';
+            document.getElementById('data-final-container').style.display = 'none';
+            document.getElementById('quant-dias-uteis-container').style.display = 'none';
+       document.getElementById('feriados-fixos-container').style.display = 'none';
+           document.getElementById('feriadosnaofixos-container').style.display = 'none';
+            btnCalcular.style.display = 'none';
+            resultLabel.innerHTML = '';
+            resultContent.innerHTML = '';
+            
+         // Remove the form created by the "Adicionar Feriados" button
+         
+  if (formNovoFeriado) {
+    formNovoFeriado.remove();
+  }
+};
+
+        // Evento para o botão "Data Inicial, Data Final. Retorno: dias úteis."
+        btnData.addEventListener('click', () => {
+            hideAllContainers(); // Esconde todos os contêineres
+            document.getElementById('data-inicial-container').style.display = 'block'; // Exibe o contêiner da data inicial
+            document.getElementById('data-final-container').style.display = 'block'; // Exibe o contêiner da data final
+            btnCalcular.style.display = 'block'; // Exibe o botão de calcular
+            btnCalcular.removeEventListener('click', calculateData); // Remove evento anterior para evitar múltiplas chamadas
+            btnCalcular.removeEventListener('click', calculateDiasUteis);
+            btnCalcular.addEventListener('click', calculateData); // Adiciona o evento para calcular dias úteis entre as datas
+         // Remove the form created by the "Adicionar Feriados" button
+  if (formNovoFeriado) {
+    formNovoFeriado.remove();
+  }
+  
+});
+
+        // Evento para o botão "Data Inicial, quant dias úteis. Retorno: data final."
+        btnDiasUteis.addEventListener('click', () => {
+            hideAllContainers(); // Esconde todos os contêineres
+            document.getElementById('data-inicial-container').style.display = 'block'; // Exibe o contêiner da data inicial
+            document.getElementById('quant-dias-uteis-container').style.display = 'block'; // Exibe o contêiner da quantidade de dias úteis
+            btnCalcular.style.display = 'block'; // Exibe o botão de calcular
+            btnCalcular.removeEventListener('click', calculateData); // Remove evento anterior para evitar múltiplas chamadas
+            btnCalcular.removeEventListener('click', calculateDiasUteis);
+            btnCalcular.addEventListener('click', calculateDiasUteis); // Adiciona o evento para calcular a data final
+         // Remove the form created by the "Adicionar Feriados" button
+         if (formNovoFeriado) {
+            formNovoFeriado.remove();
+              }
+            });
+
+        // Função para calcular os dias úteis entre duas datas
+        function calculateData() {
+            const dataInicial = document.getElementById('data-inicial').value; // Obtém a data inicial
+            const dataFinal = document.getElementById('data-final').value; // Obtém a data final
+            if (dataInicial && dataFinal) { // Verifica se ambas as datas foram fornecidas
+                fetch(`/dias-uteis?dataInicial=${dataInicial}&dataFinal=${dataFinal}`) // Envia a solicitação para a API
+                    .then(response => response.json()) // Converte a resposta para JSON
+                    .then(data => {
+                        resultLabel.innerHTML = 'Dias Úteis:'; // Exibe o rótulo do resultado
+                        resultContent.innerHTML = data.diasUteis; // Exibe a quantidade de dias úteis
+                    })
+                    .catch(error => console.error(error)); // Exibe erros no console
+            }
+        }
+
+        // Função para calcular a data final após adicionar dias úteis a uma data inicial
+        function calculateDiasUteis() {
+            const dataInicial = document.getElementById('data-inicial').value; // Obtém a data inicial
+            const quantDiasUteis = document.getElementById('quant-dias-uteis').value; // Obtém a quantidade de dias úteis
+            if (dataInicial && quantDiasUteis) { // Verifica se a data inicial e a quantidade de dias úteis foram fornecidas
+                fetch(`/dias-uteis?dataInicial=${dataInicial}&quantDiasUteis=${quantDiasUteis}`) // Envia a solicitação para a API
+                    .then(response => response.json()) // Converte a resposta para JSON
+                    .then(data => {
+                        const dataFinal = data.dataFinal; // Obtém a data final da resposta do servidor
+                        const formattedDataFinal = new Date(dataFinal).toLocaleDateString('pt-BR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
+                        }).replace('-', '-'); // Formata a data final para o formato brasileiro
+                        resultLabel.innerHTML = `Data Final: ${formattedDataFinal}`; // Exibe a data final formatada
+                    })
+                    .catch(error => console.error(error)); // Exibe erros no console
+            }
+        }
+
+        // Evento para o botão "Nenhum parâmetro. Retorno: json dos feriados..."
+        btnFeriados.addEventListener('click', () => {
+            hideAllContainers(); // Esconde todos os contêineres
+
+            // Define a lista de feriados
+            const data = [
+                { data: '01 de Janeiro de 2024', nome: 'Dia da Confraternização Universal (Ano Novo)' },
+                { data: '12, 13 e 14 de Fevereiro de 2024', nome: 'Carnaval' },
+                { data: '15 de Abril de 2024', nome: 'Paixão de Cristo' },
+                { data: '21 de Abril de 2024', nome: 'Tiradentes' },
+                { data: '01 de Maio de 2024', nome: 'Dia do Trabalho' },
+                { data: '30 de Maio de 2024', nome: 'Corpus Christi' },
+                { data: '24 de Junho de 2024', nome: 'Dia de São João' },
+                { data: '05 de Agosto de 2024', nome: 'Aniversário da Cidade; Dia da Padroeira das N.S. das Neves e Data magna do estado da Paraíba' },
+                { data: '07 de Setembro de 2024', nome: 'Dia da Independência' },
+                { data: '12 de Outubro de 2024', nome: 'Dia de Nossa Senhora Aparecida' },
+                { data: '28 de Outubro de 2024', nome: 'Dia do Servidor Público' },
+                { data: '02 de Novembro de 2024', nome: 'Dia de Finados' },
+                { data: '15 de Novembro de 2024', nome: 'Dia da Proclamação da República' },
+                { data: '20 de Novembro de 2024', nome: 'Dia da Consciência Negra' },
+                { data: '08 de Dezembro de 2024', nome: 'Dia de Nossa Senhora da Conceição' },
+                { data: '25 de Dezembro de 2024', nome: 'Natal' }
+            ];
+
+            // Cria uma tabela para exibir os feriados
+            const table = document.createElement('table');
+            table.border = '1'; // Define a borda da tabela
+
+            const thead = document.createElement('thead'); // Cria o cabeçalho da tabela
+            const tbody = document.createElement('tbody'); // Cria o corpo da tabela
+
+            table.appendChild(thead); // Adiciona o cabeçalho à tabela
+            table.appendChild(tbody); // Adiciona o corpo à tabela
+
+            const row = document.createElement('tr'); // Cria uma linha para o cabeçalho
+            const th1 = document.createElement('th');
+            th1.innerHTML = 'Data'; // Cabeçalho da coluna de datas
+            const th2 = document.createElement('th');
+            th2.innerHTML = 'Nome do Feriado'; // Cabeçalho da coluna de nomes dos feriados
+
+            row.appendChild(th1); // Adiciona a célula "Data" à linha do cabeçalho
+            row.appendChild(th2); // Adiciona a célula "Nome do Feriado" à linha do cabeçalho
+            thead.appendChild(row); // Adiciona a linha do cabeçalho ao cabeçalho da tabela
+
+            // Adiciona cada feriado como uma linha na tabela
+            data.forEach(feriado => {
+                const row = document.createElement('tr');
+                const td1 = document.createElement('td');
+                td1.innerHTML = feriado.data; // Adiciona a data do feriado
+                const td2 = document.createElement('td');
+                td2.innerHTML = feriado.nome; // Adiciona o nome do feriado
+
+                row.appendChild(td1); // Adiciona a célula de data à linha
+                row.appendChild(td2); // Adiciona a célula de nome do feriado à linha
+                tbody.appendChild(row); // Adiciona a linha ao corpo da tabela
+            });
+
+            // Exibe a tabela com os feriados
+            resultContent.innerHTML = ''; // Limpa o conteúdo anterior
+            resultContent.style.display = 'block'; // Exibe o contêiner do resultado
+            resultContent.style.height = 'auto'; // Define a altura automática
+            resultContent.style.width = '100%'; // Define a largura como 100%
+            resultContent.appendChild(table); // Adiciona a tabela ao contêiner de resultados
+
+            result.style.display = 'block'; // Exibe o contêiner de resultados
+            result.style.overflow = 'auto'; // Define o comportamento de rolagem se necessário
+         // Remove the form created by the "Adicionar Feriados" button
+  if (formNovoFeriado) {
+    formNovoFeriado.remove();
+  }
+  
+});
+
+// Evento para o botão feriados fixos
+document.getElementById('btn-feriadosfixos').addEventListener('click', () => {
+   // hideAllContainers('feriados-fixos-container'); // Esconde todos os contêineres
+    hideAllContainers();
+  // Fetch the feriados fixos data from the server
+  fetch('/api/feriadosfixos.json')
+    .then(response => response.json())
+    .then(data => {
+      // Convert the data to a JSON string
+      const jsonString = JSON.stringify(data, null, 2);
+
+      // Display the JSON string in the container
+      const container = document.getElementById('feriadosnaofixos-container');
+      container.innerHTML = `<pre>${jsonString}</pre>`;
+      container.style.display = 'block'; // Exibe o contêiner
+
+    })
+    .catch(error => console.error(error));
+    
+});
+
+
+
+// Evento para o botão feriados nao fixos
+document.getElementById('btn-feriadosnaofixos').addEventListener('click', () => {
+   // hideAllContainers('feriados-fixos-container'); // Esconde todos os contêineres
+    hideAllContainers();
+  // Fetch the feriados fixos data from the server
+  fetch('/api/feriadosnaofixos.json')
+    .then(response => response.json())
+    .then(data => {
+      // Convert the data to a JSON string
+      const jsonString = JSON.stringify(data, null, 2);
+
+      // Display the JSON string in the container
+      const container = document.getElementById('feriados-fixos-container');
+      container.innerHTML = `<pre>${jsonString}</pre>`;
+      container.style.display = 'block'; // Exibe o contêiner
+
+    })
+    .catch(error => console.error(error));
+    
+});
+
+
+// Evento para o botão "Adicionar Feriados"
+
+let formNovoFeriado = null;
+
+document.getElementById('btn-addferiados').addEventListener('click', () => {
+  hideAllContainers('form-novo-feriado');
+  // Remover qualquer formulário existente
+  if (formNovoFeriado) {
+    formNovoFeriado.remove();
+  }
+
+  // Cria os elementos do formulário e do seletor de data
+  
+  formNovoFeriado = document.createElement('form');
+  formNovoFeriado.id = 'form-novo-feriado';
+
+
+  const datePickerContainer = document.createElement('div');
+  const datePickerInput = document.createElement('input');
+  datePickerInput.type = 'date'; // Alterar para o tipo 'data'
+  datePickerInput.id = 'date';
+  datePickerContainer.appendChild(datePickerInput);
+  formNovoFeriado.appendChild(datePickerContainer);
+  
+
+  const labelNome = document.createElement('label');
+  labelNome.textContent = 'Nome do Feriado:';
+  formNovoFeriado.appendChild(labelNome);
+
+  const inputNome = document.createElement('input');
+  inputNome.type = 'text';
+  inputNome.id = 'nome';
+  formNovoFeriado.appendChild(inputNome);
+
+  // Adicione um grupo de botões de opção para escolher entre feriados fixos e não fixos
+  const radioGroupFixed = document.createElement('div');
+radioGroupFixed.innerHTML = `
+  <label>Feriado Fixo:</label>
+  <input type="radio" id="fixed" name="fixed" value="fixed">
+  <label>Feriado Não Fixo:</label>
+  <input type="radio" id="non-fixed" name="fixed" value="non-fixed">
+`;
+formNovoFeriado.appendChild(radioGroupFixed);
+
+const radioGroupType = document.createElement('div');
+radioGroupType.innerHTML = `
+  <label>Feriado Nacional:</label>
+  <input type="radio" id="feriado-nacional" name="type" value="feriado nacional">
+  <label>Feriado Estadual:</label>
+  <input type="radio" id="feriado-estadual" name="type" value="feriado estadual">
+  <label>Feriado Municipal:</label>
+  <input type="radio" id="feriado-municipal" name="type" value="feriado municipal">
+  <label>Ponto Facultativo:</label>
+  <input type="radio" id="ponto-facultativo" name="type" value="ponto facultativo">
+`;
+formNovoFeriado.appendChild(radioGroupType);
+
+
+
+
+  const buttonAdicionar = document.createElement('button');
+  buttonAdicionar.textContent = 'Adicionar';
+  formNovoFeriado.appendChild(buttonAdicionar);
+
+  // Adiciona o formulário ao corpo do documento HTML
+  document.body.appendChild(formNovoFeriado);
+
+ // Adicione um ouvinte de eventos ao envio do formulário
+formNovoFeriado.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  // Obter os dados do formulário
+  const date = document.getElementById('date').value;
+  const nome = document.getElementById('nome').value;
+  const fixed = document.querySelector('input[name="fixed"]:checked').value;
+  const type = document.querySelector('input[name="type"]:checked').value;
+
+  // Enviar os dados do feriado para o servidor
+  fetch('/api/novo-feriado', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, nome, type, fixed }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Exibir uma mensagem de sucesso
+    alert('Feriado adicionado com sucesso!');
+
+    // Remova o formulário do documento HTML
+    formNovoFeriado.remove();
+  })
+  .catch(error => console.error(error));
+});
+});
+
+   // Obter o elemento do formulário
+const form = document.getElementById('form-novo-feriado');
+
+// Adicione um ouvinte de eventos ao envio do formulário
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  // Obter os dados do formulário
+  const date = document.getElementById('date').value;
+  const nome = document.getElementById('nome').value;
+  const fixed = document.querySelector('input[name="fixed"]:checked').value;
+  const type = document.querySelector('input[name="type"]:checked').value;
+
+  // Enviar os dados do feriado para o servidor
+  fetch('/api/novo-feriado', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date, nome, type }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Se o feriado não for fixo, salve-o no arquivo feriadosnaofixos.json
+    if (fixed === 'non-fixed') {
+      fetch('/api/novo-feriado-nao-fixo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, nome, type }),
+      })
+      .then(response => response.json())
+      .then(data => console.log(data))
+      .catch(error => console.error(error));
+    }
+
+    // Exibir uma mensagem de sucesso
+    alert('Feriado adicionado com sucesso!');
+
+    // Remova o formulário do documento HTML
+    form.remove();
+  })
+  .catch(error => console.error(error));
+});
+
+    // Hide all containers after the form submission
+ // hideAllContainers();
+  //});
+//});
+    </script>
+</body>
+</html>
