@@ -1,0 +1,23 @@
+{
+  "name": "servidor-api-datas",
+  "version": "1.0.0",
+  "description": "Servidor API para calcular dias úteis e feriados",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "helmet": "^5.0.2",
+    "moment": "^2.29.1",
+    "cors": "^2.8.5"
+  },
+  "keywords": [
+    "dias úteis",
+    "feriados",
+    "servidor API",
+    "Node.js"
+  ],
+  "author": "Daniel Queiroz <danielcavalcanti@cc.ci.ufpb.br>",
+  "license": "MIT"
+}
