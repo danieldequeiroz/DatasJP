@@ -56,7 +56,13 @@
                 color: var(--btn-text-hover);
             }
 
-            #data-inicial-container, #data-final-container, #quant-dias-uteis-container {
+              /* Estilo específico para o btn-calcular */
+        #btn-calcular {
+            margin: 0 auto; /* Centraliza o botão "Calcular" horizontalmente */
+            display: block; /* Faz o botão ocupar o centro no container */
+        }
+
+            #data-inicial-container, #data-final-container, #quant-dias-uteis-container{
     display: flex; /* Alinha os elementos lado a lado */
     flex-wrap: nowrap; /* Garante que os itens não quebrem para a próxima linha */
     justify-content: flex-start; /* Alinha os elementos à esquerda */
