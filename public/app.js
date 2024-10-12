@@ -10,17 +10,40 @@ const feriadosNaoFixos = require(path.join(__dirname, './api/feriadosnaofixos.js
 const fs = require('fs');  // Importa o módulo de sistema de arquivos para leitura e escrita de arquivos
 const servidor = require('./servidor');  // Importa o arquivo 'servidor.js' que contém a lógica do backend
 const cors = require('cors');  // Importa o módulo CORS para permitir requisições entre diferentes domínios
+//const https = require('https');
+
+//const keyPath = 'server.key'; // Caminho para o arquivo da chave privada SSL (geralmente .key). Utilizada para decifrar informações recebidas de clientes.
+//const certPath = 'server.crt'; // Caminho para o arquivo do certificado SSL (geralmente .crt). Fornece a autenticação de identidade do servidor e permite a criptografia de dados.
+//const keyPath = path.join(__dirname, 'server.key');
+//const certPath = path.join(__dirname, 'server.crt');
+
+//if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+  //console.log('Certificados SSL encontrados.');
+//} else {
+  //console.error('Certificados SSL não encontrados.');
+//}
 
 
 
-// Middleware do Helmet para adicionar cabeçalhos de segurança
+//if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+  //const sslOptions = {
+    //key: fs.readFileSync(keyPath),
+    //cert: fs.readFileSync(certPath)
+  //};
+
+  
+
+
+ // Middleware do Helmet para adicionar cabeçalhos de segurança na configuração atual
 app.use(helmet({
-  contentSecurityPolicy: false,  // Temporariamente desativa a Política de Segurança de Conteúdo (CSP) para facilitar testes
-  referrerPolicy: { policy: 'no-referrer' },  // Define a política de referenciador (não enviar referer em requisições)
+  contentSecurityPolicy: {
+    directives: {
+      "frame-ancestors": ["*"], // Permite que o conteúdo seja carregado em iframes de qualquer origem
+      "script-src": ["'self'", "'unsafe-inline'"], 
+      "style-src": ["'self'", "'unsafe-inline'"] 
+    },
+  },
 }));
-
-// Configura o cabeçalho X-Frame-Options para SAMEORIGIN, impedindo que o conteúdo seja carregado em iframes em outros sites
-app.use(helmet.frameguard({ action: 'SAMEORIGIN' }));
 
 app.use(express.json());  // Habilita o suporte para JSON no corpo das requisições
 
@@ -112,39 +135,58 @@ function calculateDiasUteis(dataInicial, dataFinal) {
 
 // Função para calcular os dias não úteis entre duas datas
 function calculateDiasNaoUteis(dataInicial, dataFinal) {
-  const inicio = moment(dataInicial, 'YYYY-MM-DD');
+  // Começa no próximo dia após a data inicial
+  let inicio = moment(dataInicial, 'YYYY-MM-DD').add(1, 'day');
   const fim = moment(dataFinal, 'YYYY-MM-DD');
   const diasNaoUteis = [];
 
+
+
+  // Pula dias não úteis até encontrar o próximo dia útil
+  while (inicio.day() === 0 || inicio.day() === 6 || isFeriado(inicio.format('YYYY-MM-DD'))) {
+    inicio.add(1, 'day');
+  }
+
+  // Agora, começamos a contar os dias não úteis a partir desse próximo dia útil
   while (inicio.isSameOrBefore(fim)) {
     const formattedDate = inicio.format('YYYY-MM-DD');
-    if (inicio.day() === 0 || inicio.day() === 6 || isFeriado(formattedDate)) { // Check for Sunday, Saturday and feriados
+
+    let diasNaoUteis = 0;
+
+    // Verifica se o dia é fim de semana ou feriado
+    if (inicio.day() === 0 || inicio.day() === 6 || isFeriado(formattedDate)) {
       diasNaoUteis.push(formattedDate);
     }
+
+    // Avança um dia
     inicio.add(1, 'day');
   }
 
   return diasNaoUteis.length;
 }
 
+
+
+
 // Função para calcular a data final após adicionar dias úteis a uma data inicial
 function calculateDataFinal(dataInicial, quantDiasUteis) {
-  const inicio = moment(dataInicial, 'YYYY-MM-DD');
+  const inicio = moment(dataInicial, 'YYYY-MM-DD').add(1, 'day'); // Começa no próximo dia útil
+
   if (!inicio.isValid()) {
     throw new Error('Data inicial inválida');
   }
+
   let diasUteis = 0;
 
-  // Se a data inicial for sábado ou domingo, adicione um dia até que seja um dia útil
+  // Se o próximo dia for sábado ou domingo, pula para o próximo dia útil
   while (inicio.day() === 0 || inicio.day() === 6) {
     inicio.add(1, 'day');
   }
 
-  // Continuar até que o número de dias úteis necessários seja atingido
+  // Continua até atingir o número necessário de dias úteis
   while (diasUteis < quantDiasUteis) {
     const formattedDate = inicio.format('YYYY-MM-DD');
-    
-    // Verifica se o dia não é fim de semana e não é feriado
+
     if (inicio.day() !== 0 && inicio.day() !== 6 && !isFeriado(formattedDate)) {
       diasUteis++;
     }
@@ -153,6 +195,8 @@ function calculateDataFinal(dataInicial, quantDiasUteis) {
 
   return inicio.format('YYYY-MM-DD');
 }
+
+
 
 // Define a rota para adicionar um novo feriado
 app.post('/api/novo-feriado', (req, res) => {
@@ -184,6 +228,7 @@ app.post('/api/novo-feriado', (req, res) => {
 app.use('/api', servidor);
 
 // Inicie o servidor
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:3002`);
+app.listen(3002, () => {
+  console.log('Servidor rodando em localhost:3002');
 });
+
